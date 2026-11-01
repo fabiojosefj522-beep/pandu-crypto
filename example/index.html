@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pandu-crypto: demo</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; background: #fafafa; color: #111; }
+  textarea, pre { width: 100%; box-sizing: border-box; font: 13px/1.4 ui-monospace, monospace; }
+  textarea { height: 110px; }
+  pre { background: #fff; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+  button { font-size: 16px; padding: 8px 14px; margin: 8px 8px 8px 0; }
+  .k { color: #c81e1e; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>pandu-crypto</h1>
+<p>Tudo acontece neste navegador, sem servidor. Veja o que um servidor guardaria e o que fica só no link.<br>
+<small>Everything runs in this browser. See what a server would store and what stays only in the link.</small></p>
+<textarea id="data">{"nome": "Maria", "alergias": ["penicilina"], "contato": "+55 11 99999-0000"}</textarea>
+<button id="go">Cifrar / Encrypt</button><button id="open" disabled>Abrir pelo link / Open from link</button>
+<h3>O servidor guarda / The server stores</h3><pre id="srv">–</pre>
+<h3>O link do QR / The QR link <small>(a chave fica depois do # / the key is after #)</small></h3><pre id="link">–</pre>
+<h3>Quem escaneia vê / Whoever scans sees</h3><pre id="out">–</pre>
+<script type="module">
+import { newCard, encrypt, decrypt, makeLink, parseLink, tokenHash } from '../src/pandu-crypto.js';
+const $ = (id) => document.getElementById(id);
+let stored = null, link = '';
+$('go').onclick = async () => {
+  let data; try { data = JSON.parse($('data').value); } catch (_) { alert('JSON inválido / invalid JSON'); return; }
+  const card = newCard(), { ct, iv } = await encrypt(data, card.key);
+  stored = { id: card.id, ct, iv, u: new Date().toISOString(), h: await tokenHash(card.tok) };
+  link = makeLink(location.origin + '/card', card.id, card.key);
+  $('srv').textContent = JSON.stringify(stored, null, 2);
+  $('link').innerHTML = link.replace(card.key, '<span class="k">' + card.key + '</span>');
+  $('out').textContent = '–'; $('open').disabled = false;
+};
+$('open').onclick = async () => {
+  const p = parseLink(link), data = p && p.id === stored.id ? await decrypt(stored.ct, stored.iv, p.key) : null;
+  $('out').textContent = data ? JSON.stringify(data, null, 2) : 'não abriu / could not open';
+};
+</script>
+</body>
+</html>

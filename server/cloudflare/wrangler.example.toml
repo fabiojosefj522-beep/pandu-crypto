@@ -1,0 +1,10 @@
+# Copy to wrangler.toml, create the database with:  npx wrangler d1 create my-cards
+# and paste its id below. Then:  npx wrangler pages deploy <your-site-folder>
+name = "my-cards"
+pages_build_output_dir = "public"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "my-cards"
+database_id = "PASTE-YOUR-D1-ID-HERE"
