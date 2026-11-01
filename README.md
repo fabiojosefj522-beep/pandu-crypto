@@ -52,9 +52,9 @@ Planos de saúde, clínicas, escolas, eventos, segurança do trabalho, pet shops
 5. **Deixe o usuário apagar e trocar o QR** (`remove()` e um `newCard()` novo).
 6. **Diga na política de privacidade o que o servidor guarda:** id, bytes cifrados, IV, data e o hash do token.
 
-Isto não é aconselhamento jurídico: confirme com o seu jurídico ou com o encarregado de dados (DPO).
+Textos oficiais: [LGPD (Lei 13.709/2018)](https://planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm) · [GDPR (Regulamento UE 2016/679)](https://eur-lex.europa.eu/eli/reg/2016/679/oj/por). Isto não é aconselhamento jurídico: confirme com o seu jurídico ou com o encarregado de dados (DPO).
 
-**Precisa de ajuda?** Integração, personalização com a sua marca ou suporte: **contato@usepandu.com.br**. Se usar o pandu-crypto, você pode mostrar "Criptografia: pandu-crypto" com um link para este repositório.
+Se usar o pandu-crypto, você pode mostrar "Criptografia: pandu-crypto" com um link para este repositório.
 
 ## Uso
 
@@ -159,9 +159,9 @@ Health plans, clinics, schools, events, workplace safety teams, pet businesses a
 5. **Let users delete and replace their QR** (`remove()` and a fresh `newCard()`).
 6. **Say in your privacy policy what the server keeps:** id, ciphertext, IV, date and the token hash.
 
-This is not legal advice: check with your legal team or data protection officer.
+Official texts: [GDPR (Regulation (EU) 2016/679)](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng) · [LGPD (Brazilian Law 13,709/2018, in Portuguese)](https://planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm). This is not legal advice: check with your legal team or data protection officer.
 
-**Need help?** Integration, white-label customisation or support: **contato@usepandu.com.br**. If you use pandu-crypto, you can show "Encryption: pandu-crypto" with a link to this repository.
+If you use pandu-crypto, you can show "Encryption: pandu-crypto" with a link to this repository.
 
 ### Usage
 
