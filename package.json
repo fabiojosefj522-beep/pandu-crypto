@@ -8,6 +8,8 @@
   "files": [
     "src",
     "server",
+    "examples",
+    "FORMAT.md",
     "README.md",
     "LICENSE"
   ],

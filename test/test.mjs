@@ -70,5 +70,19 @@ ok((await load(API, makeLink('https://e.com/', newCard().id, c.key))).error === 
 ok(await remove(API, c) === 200 && (await load(API, link)).error === 'turned-off', 'delete -> turned off (410)');
 ok(rows.get(c.id).ct === '', 'delete erases the encrypted bytes');
 
+// official vectors (test/vectors.json): the same checks other languages run (examples/python, examples/java)
+const V = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('./vectors.json', import.meta.url), 'utf8'));
+const fromHex = (h) => Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16));
+ok(V.base32.every((v) => b32(new TextEncoder().encode(v.text)) === v.base32 && new TextDecoder().decode(unb32(v.base32)) === v.text), 'vectors: base32 (RFC 4648)');
+ok(V.base64url.every((v) => b64url(fromHex(v.hex)) === v.base64url), 'vectors: base64url');
+ok(makeLink(V.link.base, V.link.id, V.link.key) === V.link.link && b32(fromHex(V.link.id_hex)) === V.link.id, 'vectors: link');
+ok(await tokenHash(V.token.tok) === V.token.sha256_hex, 'vectors: token hash');
+for (const v of V.aes_gcm) {
+  ok(JSON.stringify(await decrypt(v.ct, v.iv, v.key)) === v.json, 'vectors: decrypt ' + v.name);
+  const k = await crypto.subtle.importKey('raw', unb32(v.key), 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: unb64url(v.iv) }, k, fromHex(v.plaintext_hex)));
+  ok(b64url(ct) === v.ct && unb32(v.key).length * 8 === (v.key.length === 26 ? 128 : 256), 'vectors: encrypt ' + v.name);
+}
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

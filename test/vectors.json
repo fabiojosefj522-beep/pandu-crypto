@@ -1,0 +1,89 @@
+{
+  "about": "pandu-crypto test vectors. Base32: RFC 4648 alphabet, no padding. Base64url: no padding. AES-GCM with a 96-bit IV and a 128-bit tag appended to the ciphertext, no associated data. plaintext = 1 flag byte (0 = UTF-8 JSON, 1 = raw DEFLATE of the UTF-8 JSON) + body.",
+  "base32": [
+    {
+      "text": "",
+      "base32": ""
+    },
+    {
+      "text": "f",
+      "base32": "MY"
+    },
+    {
+      "text": "fo",
+      "base32": "MZXQ"
+    },
+    {
+      "text": "foo",
+      "base32": "MZXW6"
+    },
+    {
+      "text": "foob",
+      "base32": "MZXW6YQ"
+    },
+    {
+      "text": "fooba",
+      "base32": "MZXW6YTB"
+    },
+    {
+      "text": "foobar",
+      "base32": "MZXW6YTBOI"
+    }
+  ],
+  "base64url": [
+    {
+      "hex": "fbff",
+      "base64url": "-_8"
+    },
+    {
+      "hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "base64url": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8"
+    }
+  ],
+  "link": {
+    "base": "https://example.com/card?x=1#old",
+    "id": "UCQ2FI5EUWTKPKFJ",
+    "id_hex": "a0a1a2a3a4a5a6a7a8a9",
+    "key": "AAAQEAYEAUDAOCAJBIFQYDIOB4",
+    "link": "https://example.com/card?x=1#D=UCQ2FI5EUWTKPKFJAAAQEAYEAUDAOCAJBIFQYDIOB4"
+  },
+  "token": {
+    "tok": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8",
+    "sha256_hex": "f45dc82a7523d14974cea050e3028e8bf06a8ee855a9d63034ebb4fb9ecc2305"
+  },
+  "aes_gcm": [
+    {
+      "name": "aes-128, plain JSON (flag 0)",
+      "key": "AAAQEAYEAUDAOCAJBIFQYDIOB4",
+      "key_hex": "000102030405060708090a0b0c0d0e0f",
+      "iv": "8PHy8_T19vf4-fr7",
+      "iv_hex": "f0f1f2f3f4f5f6f7f8f9fafb",
+      "flag": 0,
+      "json": "{\"n\":\"Maria da Silva\",\"bt\":\"O+\",\"al\":[\"Dipirona\",\"Penicilina\"],\"ct\":[[\"Fábio\",\"filho\",\"+55 31 99999-0000\"]],\"note\":\"Diabética. Usa insulina. 🐼\"}",
+      "plaintext_hex": "007b226e223a224d617269612064612053696c7661222c226274223a224f2b222c22616c223a5b2244697069726f6e61222c2250656e6963696c696e61225d2c226374223a5b5b2246c3a162696f222c2266696c686f222c222b35352033312039393939392d30303030225d5d2c226e6f7465223a2244696162c3a9746963612e2055736120696e73756c696e612e20f09f90bc227d",
+      "ct": "EWHEHRjiRzlSjlbR92TMVxbmT0KK6dtvusX3cUb-M4A-RIxtTqGiR9JxADvGGp-xG2qO1Op5MI3n9PF4rE_B_VEKdhQGCsJdMiMeg_Akz59mbqcY2c12dArMvxpCo1Fx-CvSu-LzMeymVoxLLJuM2i8y5wsYh_NOf2c6wuQJxMFElxeMaOzEcQpYRB0ctCwoab5Dz0dLPIRL5Vq5ij-AtXdDGzDaeQ"
+    },
+    {
+      "name": "aes-128, deflate-raw (flag 1)",
+      "key": "AAAQEAYEAUDAOCAJBIFQYDIOB4",
+      "key_hex": "000102030405060708090a0b0c0d0e0f",
+      "iv": "4OHi4-Tl5ufo6err",
+      "iv_hex": "e0e1e2e3e4e5e6e7e8e9eaeb",
+      "flag": 1,
+      "json": "{\"n\":\"Maria da Silva\",\"bt\":\"O+\",\"al\":[\"Dipirona\",\"Penicilina\"],\"ct\":[[\"Fábio\",\"filho\",\"+55 31 99999-0000\"]],\"note\":\"Diabética. Usa insulina. 🐼Diabética. Usa insulina. 🐼Diabética. Usa insulina. 🐼Diabética. Usa insulina. 🐼Diabética. Usa insulina. 🐼Diabética. Usa insulina. 🐼\"}",
+      "plaintext_hex": "01cd8c310ac2301846aff2f3ad8d25221dcc5cdc44419c42863fb1e20f219536ba8877f006e2e81ddc7a218f20b9856f79c383774382c19a07613a30ed245e190a3ec360534181238c452b6719fa54d2b64b12244a6238859061acc56a7a79e9a17094782aae9a8616735a16665a6b0de714529f3b18b4c27e7a67095cd37e6492345ecab0a6eff3f1f9cf8afb0f",
+      "ct": "L4empy-He5TjYmnV-Y5ykhwvOstwsBIyaoL6NT8rRSGbuQ_tYQTjtE3V68PC1cW0DV_-FuLHz6jICgvb_JGgdpa33QTnnANSDPQ_4Ts5wiJvcYJR2fHJhvbhl7VnVCV8g0JUpUzJS7VbhzXQZ1EIiLJ4yKJ8rpeg9mgysjWNn1ATVtRSVfVk4hLHy4xP4-UHXDnxuvk1syyjY2H5Wfc"
+    },
+    {
+      "name": "aes-256, plain JSON (flag 0)",
+      "key": "QCAYFA4EQWDIPCEJRKFYZDMOR6IJDEUTSSKZNF4YTGNJXHE5T2PQ",
+      "key_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+      "iv": "0NHS09TV1tfY2drb",
+      "iv_hex": "d0d1d2d3d4d5d6d7d8d9dadb",
+      "flag": 0,
+      "json": "{\"n\":\"Maria da Silva\",\"bt\":\"O+\",\"al\":[\"Dipirona\",\"Penicilina\"],\"ct\":[[\"Fábio\",\"filho\",\"+55 31 99999-0000\"]],\"note\":\"Diabética. Usa insulina. 🐼\"}",
+      "plaintext_hex": "007b226e223a224d617269612064612053696c7661222c226274223a224f2b222c22616c223a5b2244697069726f6e61222c2250656e6963696c696e61225d2c226374223a5b5b2246c3a162696f222c2266696c686f222c222b35352033312039393939392d30303030225d5d2c226e6f7465223a2244696162c3a9746963612e2055736120696e73756c696e612e20f09f90bc227d",
+      "ct": "oOCOPLqLHDTBWeFDMTGxBnidLnJeKDXX5oR47zkKZFoqCxno1SXv4z0zn5Vduc02NMs3SyvVO4EmSbDYZ5rQHSuYLD4mRlwsCBighp-qpbcpBSuMzGtZiC4ttPrG1ojbTlVOptRKUtUbNCfF6i8cW8vBCejVf3cdGrSeuafl2ROp-C7EOqx9EwRgsAMIFZRETIo7NRc99k10A6PHgIi6jRB6_C5_kA"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
 node_modules/
 wrangler.toml
 .wrangler/
+build/
+__pycache__/

@@ -80,9 +80,18 @@ Com o servidor de referência, há atalhos: `save(api, card, dados)`, `load(api,
 2. Crie o banco: `npx wrangler d1 create meus-cartoes` e ligue-o com o nome `DB` (veja `server/cloudflare/wrangler.example.toml`).
 3. Publique. A tabela é criada no primeiro uso.
 
+### Outras linguagens
+
+O formato está descrito em detalhes em [FORMAT.md](FORMAT.md), com [vetores de teste](test/vectors.json) oficiais. Já existem versões prontas, compatíveis entre si e conferidas com os mesmos vetores a cada mudança:
+
+- **Python:** [examples/python/pandu_crypto.py](examples/python/pandu_crypto.py) (precisa de `pip install cryptography`)
+- **Java e Kotlin (Android):** [examples/java/PanduCrypto.java](examples/java/PanduCrypto.java), sem dependências
+
+Um cartão cifrado em Python ou Java abre no navegador, e vice-versa.
+
 ### Testes e demonstração
 
-- `node test/test.mjs`: 31 testes, sem instalar nada.
+- `node test/test.mjs`: 41 testes, sem instalar nada. Python: `python examples/python/test_vectors.py`. Java: `javac -d build examples/java/*.java && java -cp build VectorsTest`.
 - `example/index.html`: sirva a pasta (por exemplo `python3 -m http.server`) e abra `/example/` para ver, lado a lado, o que o servidor guardaria e o que fica só no link.
 
 ## E os computadores quânticos?
@@ -183,7 +192,9 @@ With the reference server there are shortcuts: `save(api, card, data)`, `load(ap
 
 **Reference server (Cloudflare Pages + D1):** copy `server/cloudflare/functions/` to your Pages project root, create a database with `npx wrangler d1 create my-cards`, bind it as `DB` (see `server/cloudflare/wrangler.example.toml`) and deploy. The table is created on first use.
 
-**Tests and demo:** `node test/test.mjs` (31 tests, nothing to install). Serve the folder and open `/example/` to see, side by side, what a server would store and what stays only in the link.
+**Other languages:** the format is specified in [FORMAT.md](FORMAT.md), with official [test vectors](test/vectors.json). Ready-made, mutually compatible versions are checked against the same vectors on every change: [Python](examples/python/pandu_crypto.py) (`pip install cryptography`) and [Java/Kotlin for Android](examples/java/PanduCrypto.java) (no dependencies). A card encrypted in Python or Java opens in the browser, and the other way round.
+
+**Tests and demo:** `node test/test.mjs` (41 tests, nothing to install); `python examples/python/test_vectors.py`; `javac -d build examples/java/*.java && java -cp build VectorsTest`. Serve the folder and open `/example/` to see, side by side, what a server would store and what stays only in the link.
 
 ### What about quantum computers?
 

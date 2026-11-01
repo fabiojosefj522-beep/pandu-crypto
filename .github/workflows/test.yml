@@ -8,4 +8,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node test/test.mjs
+      - name: JavaScript
+        run: node test/test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python (same vectors)
+        run: pip install cryptography && python examples/python/test_vectors.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Java (same vectors)
+        run: javac -d build examples/java/*.java && java -cp build VectorsTest test/vectors.json
