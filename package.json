@@ -1,6 +1,6 @@
 {
   "name": "pandu-crypto",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Zero-knowledge QR links for sensitive data: AES-GCM on the device, the key only in the URL fragment, the server stores only ciphertext. The method behind Pandu SOS.",
   "type": "module",
   "main": "src/pandu-crypto.js",

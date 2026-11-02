@@ -1,5 +1,5 @@
 // node test/test.mjs — no dependencies (Node 18+)
-import { newCard, encrypt, decrypt, makeLink, parseLink, tokenHash, b32, unb32, b64url, unb64url, save, load, remove } from '../src/pandu-crypto.js';
+import { newCard, encrypt, decrypt, makeLink, parseLink, tokenHash, b32, unb32, b64url, unb64url, save, load, remove, encryptPin, decryptPin, pinProof, savePin, openPin } from '../src/pandu-crypto.js';
 import { onRequest } from '../server/cloudflare/functions/api/q.js';
 
 let pass = 0, fail = 0;
@@ -45,30 +45,62 @@ ok(await decrypt(e256.ct, e256.iv, c.key) === null && await decrypt(e1.ct, e1.iv
 ok(JSON.stringify(parseLink(link)) === JSON.stringify({ id: c.id, key: c.key }), '128-bit links still parse');
 let threw = false; try { newCard({ bits: 192 }); } catch (_) { threw = true; } ok(threw, 'only 128 or 256');
 
-// reference server with an in-memory D1 stand-in
-const rows = new Map();
-const DB = { prepare(sql) { let a = []; const st = {
-  bind(...x) { a = x; return st; },
-  async first() { const r = rows.get(a[0]); if (!r) return null; return sql.startsWith('SELECT h') ? { h: r.h } : { ct: r.ct, iv: r.iv, u: r.u }; },
-  async run() {
-    if (sql.startsWith('CREATE')) return;
-    if (sql.includes("VALUES (?1, '', ''")) { const [id, u, h] = a, o = rows.get(id); if (!o) rows.set(id, { ct: '', iv: '', u, h }); else if (o.h === h) Object.assign(o, { ct: '', iv: '', u }); return; }
-    const [id, ct, iv, u, h] = a, o = rows.get(id); if (!o) rows.set(id, { ct, iv, u, h }); else if (o.h === h) Object.assign(o, { ct, iv, u });
-  } }; return st; } };
-globalThis.fetch = async (url, opt = {}) => onRequest({ request: new Request(new URL(url, 'https://x.test/'), opt), env: { DB } });
-const API = 'https://x.test/api/q';
-ok(await save(API, c, data) === 200, 'save');
-const got = await load(API, link);
-ok(JSON.stringify(got.data) === JSON.stringify(data), 'load + decrypt');
-const stored = rows.get(c.id);
-ok(!JSON.stringify(stored).includes('Maria') && !JSON.stringify(stored).includes(c.key) && !JSON.stringify(stored).includes(c.tok), 'server keeps no data, no key, no token');
-ok(stored.h === await tokenHash(c.tok), 'server keeps only the token hash');
-ok(await save(API, { ...c, tok: newCard().tok }, { name: 'attacker' }) === 403, 'someone else cannot overwrite');
-ok(await remove(API, { ...c, tok: newCard().tok }) === 403, 'someone else cannot delete');
-ok((await load(API, makeLink('https://e.com/', c.id, newCard().key))).error === 'bad-key', 'wrong key in link');
-ok((await load(API, makeLink('https://e.com/', newCard().id, c.key))).error === 'not-found', 'unknown id -> not-found');
-ok(await remove(API, c) === 200 && (await load(API, link)).error === 'turned-off', 'delete -> turned off (410)');
-ok(rows.get(c.id).ct === '', 'delete erases the encrypted bytes');
+// reference server on a real SQLite (like D1); skipped on Node versions without node:sqlite
+let sqliteMod = null; try { sqliteMod = await import('node:sqlite'); } catch (_) { sqliteMod = null; }
+if (!sqliteMod) console.log('  (server tests skipped: this Node has no node:sqlite)');
+else {
+  const sq = new sqliteMod.DatabaseSync(':memory:');
+  const DB = { prepare(sql) { let a = []; const api = { bind(...x) { a = x; return api; }, async first() { const r = sq.prepare(sql).get(...a); return r === undefined ? null : { ...r }; }, async run() { sq.prepare(sql).run(...a); return { success: true }; }, async all() { return { results: sq.prepare(sql).all(...a).map((r) => ({ ...r })) }; } }; return api; } };
+  let ip = 0;
+  globalThis.fetch = async (url, opt = {}) => { const req = new Request(new URL(url, 'https://x.test/'), opt); if (opt.headers) req.headers.set('CF-Connecting-IP', '10.0.0.' + (ip++ % 250)); return onRequest({ request: req, env: { DB } }); };
+  const API = 'https://x.test/api/q', row = (id) => sq.prepare('SELECT * FROM q WHERE id = ?').get(id);
+  ok(await save(API, c, data) === 200, 'save');
+  const got = await load(API, link);
+  ok(JSON.stringify(got.data) === JSON.stringify(data), 'load + decrypt');
+  const stored = row(c.id);
+  ok(!JSON.stringify(stored).includes('Maria') && !JSON.stringify(stored).includes(c.key) && !JSON.stringify(stored).includes(c.tok), 'server keeps no data, no key, no token');
+  ok(stored.h === await tokenHash(c.tok), 'server keeps only the token hash');
+  ok(await save(API, { ...c, tok: newCard().tok }, { name: 'attacker' }) === 403, 'someone else cannot overwrite');
+  ok(await remove(API, { ...c, tok: newCard().tok }) === 403, 'someone else cannot delete');
+  ok((await load(API, makeLink('https://e.com/', c.id, newCard().key))).error === 'bad-key', 'wrong key in link');
+  ok((await load(API, makeLink('https://e.com/', newCard().id, c.key))).error === 'not-found', 'unknown id -> not-found');
+  ok(await remove(API, c) === 200 && (await load(API, link)).error === 'turned-off', 'delete -> turned off (410)');
+  ok(row(c.id).ct === '', 'delete erases the encrypted bytes');
+
+  // QR + PIN
+  const pc = newCard({ pin: true }), plink = makeLink('https://e.com/r', pc.id, pc.key, { pin: true }), report = { doc: 'Laudo', text: 'Exame normal. 🐼'.repeat(10) };
+  ok(/^[A-Za-z0-9_-]{22}$/.test(pc.share) && plink.includes('#P=') && parseLink(plink).pin === true, 'PIN card: share and #P= link');
+  ok(await savePin(API, pc, report, '482913') === 200, 'save with PIN');
+  const pr = row(pc.id);
+  ok(pr.s === pc.share && pr.ph.length === 64 && !JSON.stringify(pr).includes('482913') && !JSON.stringify(pr).includes(pc.key), 'server keeps the share and a proof hash, never the PIN or the QR key');
+  ok((await load(API, plink)).error === 'needs-pin', 'a #P= link asks for the PIN');
+  const g = await (await fetch(API + '?id=' + pc.id)).json();
+  ok(g.pin === true && !g.ct && !g.s, 'GET of a PIN card gives no bytes and no share');
+  ok(await decrypt(pr.ct, pr.iv, pc.key) === null, 'the QR key alone does not open it (photo of the QR)');
+  ok(await decryptPin(pr.ct, pr.iv, pc.id, newCard().key, pr.s) === null, 'the server share alone does not open it (database copy)');
+  const o1 = await openPin(API, plink, '482913');
+  ok(JSON.stringify(o1.data) === JSON.stringify(report), 'right PIN opens it');
+  const w = []; for (let i = 0; i < 4; i++) w.push(await openPin(API, plink, '000000'));
+  ok(w.map((x) => x.left).join() === '4,3,2,1' && w.every((x) => x.error === 'wrong-pin'), 'wrong PINs are counted', w);
+  const ok1 = await openPin(API, plink, '482913');
+  ok(ok1.data && row(pc.id).pf === 0, 'the right PIN resets the count');
+  for (let i = 0; i < 4; i++) await openPin(API, plink, '111111');
+  const lock = await openPin(API, plink, '111111');
+  ok(lock.error === 'locked' && lock.wait > 800 && lock.wait <= 900, '5th wrong PIN: locked for 15 minutes', lock);
+  ok((await openPin(API, plink, '482913')).error === 'locked', 'locked even with the right PIN');
+  const nowReal = Date.now; Date.now = () => nowReal() + 16 * 60e3;
+  const lock2 = await openPin(API, plink, '222222');
+  ok(lock2.error === 'locked' && lock2.wait > 1700 && lock2.wait <= 1800, 'next wrong PIN after the lock: 30 minutes', lock2);
+  Date.now = nowReal;
+  ok(await savePin(API, pc, report) === 200 && (await openPin(API, plink, '482913')).data, 'the owner saving again unlocks it');
+  ok(await savePin(API, pc, { ...report, text: 'novo' }) === 200 && row(pc.id).ph === pr.ph && (await openPin(API, plink, '482913')).data.text === 'novo', 'saving without a PIN keeps the PIN');
+  ok(await savePin(API, pc, report, '7777') === 200 && (await openPin(API, plink, '482913')).error === 'wrong-pin' && (await openPin(API, plink, '7777')).data, 'the owner can change the PIN');
+  ok(await savePin(API, { ...pc, tok: newCard().tok }, report, '1234') === 403, 'someone else cannot change the PIN');
+  let threw = false; try { await pinProof(pc.id, pc.key, '12a4'); } catch (_) { threw = true; } ok(threw, 'the PIN must be digits');
+  ok((await openPin(API, makeLink('https://e.com/', newCard().id, pc.key, { pin: true }), '1234')).error === 'not-found', 'unknown PIN card -> not-found');
+  ok(await remove(API, pc) === 200 && row(pc.id).s === null && (await openPin(API, plink, '7777')).error === 'turned-off', 'delete erases the share too');
+}
+
 
 // official vectors (test/vectors.json): the same checks other languages run (examples/python, examples/java)
 const V = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('./vectors.json', import.meta.url), 'utf8'));
@@ -82,6 +114,15 @@ for (const v of V.aes_gcm) {
   const k = await crypto.subtle.importKey('raw', unb32(v.key), 'AES-GCM', false, ['encrypt']);
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: unb64url(v.iv) }, k, fromHex(v.plaintext_hex)));
   ok(b64url(ct) === v.ct && unb32(v.key).length * 8 === (v.key.length === 26 ? 128 : 256), 'vectors: encrypt ' + v.name);
+}
+
+{
+  const pv = V.pin;
+  ok(await pinProof(pv.id, pv.key, pv.pin) === pv.proof && await tokenHash(pv.proof) === pv.ph, 'vectors: PIN proof');
+  ok(makeLink('https://example.com/r', pv.id, pv.key, { pin: true }) === pv.link, 'vectors: PIN link');
+  ok(JSON.stringify(await decryptPin(pv.ct, pv.iv, pv.id, pv.key, pv.share)) === pv.json, 'vectors: PIN decrypt');
+  const k = await crypto.subtle.importKey('raw', fromHex(pv.data_key_hex), 'AES-GCM', false, ['encrypt']);
+  ok(b64url(new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: unb64url(pv.iv) }, k, fromHex(pv.plaintext_hex)))) === pv.ct, 'vectors: PIN encrypt');
 }
 
 console.log(`${pass} passed, ${fail} failed`);

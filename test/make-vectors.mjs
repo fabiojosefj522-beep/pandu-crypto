@@ -2,7 +2,7 @@
 // node test/make-vectors.mjs   (the vectors are committed; run again only if the format changes)
 import { writeFileSync } from 'node:fs';
 import { deflateRawSync } from 'node:zlib';
-import { b32, b64url, makeLink, tokenHash, decrypt } from '../src/pandu-crypto.js';
+import { b32, b64url, unb32, unb64url, makeLink, tokenHash, decrypt, pinProof, decryptPin } from '../src/pandu-crypto.js';
 
 const seq = (n, start = 0) => Uint8Array.from({ length: n }, (_, i) => (start + i) & 255);
 const hex = (u8) => Buffer.from(u8).toString('hex');
@@ -36,6 +36,22 @@ const out = {
     await vector('aes-256, plain JSON (flag 0)', seq(32, 0x80), seq(12, 0xd0), data, 0),
   ],
 };
+/* QR + PIN: every intermediate value, so another language can check each step */
+async function hkdf(ikm, salt, info, len) {
+  const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: enc.encode(info) }, k, len * 8));
+}
+{
+  const id = b32(seq(10, 0x30)), key = b32(seq(16, 0x50)), share = b64url(seq(16, 0x70)), pin = '482913', ivB = seq(12, 0xc0);
+  const salt = await hkdf(unb32(key), unb32(id), 'pandu-pin-v1/pin', 16), proof = await pinProof(id, key, pin);
+  const ikm = new Uint8Array(32); ikm.set(unb32(key)); ikm.set(unb64url(share), 16);
+  const dk = await hkdf(ikm, unb32(id), 'pandu-pin-v1/data', 16);
+  const json = JSON.stringify({ doc: 'Laudo', text: 'Exame normal.' }), plain = new Uint8Array([0, ...enc.encode(json)]);
+  const ct = b64url(await aes(dk, ivB, plain));
+  if (JSON.stringify(await decryptPin(ct, b64url(ivB), id, key, share)) !== json) throw new Error('pin round trip failed');
+  out.pin = { about: 'pin_salt = HKDF-SHA256(ikm = key bytes, salt = id bytes, info = "pandu-pin-v1/pin", 16 bytes); proof = base64url(PBKDF2-SHA256(PIN as ASCII digits, pin_salt, 100000 iterations, 32 bytes)); ph = hex SHA-256 of the proof string; data_key = HKDF-SHA256(ikm = key bytes || share bytes, salt = id bytes, info = "pandu-pin-v1/data", length of the key)',
+    id, key, share, pin, link: makeLink('https://example.com/r', id, key, { pin: true }), pin_salt_hex: hex(salt), proof, ph: await tokenHash(proof), data_key_hex: hex(dk), iv: b64url(ivB), plaintext_hex: hex(plain), json, ct };
+}
 for (const v of out.base32) if (b32(enc.encode(v.text)) !== v.base32) throw new Error('base32 vector ' + v.text);
 writeFileSync(new URL('./vectors.json', import.meta.url), JSON.stringify(out, null, 2) + '\n');
 console.log('vectors.json written:', out.aes_gcm.length, 'AES vectors');

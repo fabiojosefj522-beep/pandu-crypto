@@ -11,25 +11,30 @@ import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public final class PanduCrypto {
   private static final String B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  private static final Pattern LINK = Pattern.compile("#D=([A-Z2-7]{16})([A-Z2-7]{26}|[A-Z2-7]{52})$");
+  private static final Pattern LINK = Pattern.compile("#([DP])=([A-Z2-7]{16})([A-Z2-7]{26}|[A-Z2-7]{52})$");
+  private static final int PIN_ITER = 100000;
   private static final SecureRandom RNG = new SecureRandom();
 
   private PanduCrypto() {}
 
   /** id and key go into the QR; tok (the edit token) stays only with the owner. */
   public static final class Card {
-    public final String id, key, tok;
-    Card(String id, String key, String tok) { this.id = id; this.key = key; this.tok = tok; }
+    public final String id, key, tok, share; /* share: only for QR + PIN cards (null otherwise) */
+    Card(String id, String key, String tok, String share) { this.id = id; this.key = key; this.tok = tok; this.share = share; }
   }
 
   public static final class Sealed {
-    public final String ct, iv;
-    Sealed(String ct, String iv) { this.ct = ct; this.iv = iv; }
+    public final String ct, iv, s, ph; /* s and ph: only when a PIN is set (send them to the server) */
+    Sealed(String ct, String iv) { this(ct, iv, null, null); }
+    Sealed(String ct, String iv, String s, String ph) { this.ct = ct; this.iv = iv; this.s = s; this.ph = ph; }
   }
 
   /** Base32, RFC 4648 alphabet, no padding. */
@@ -64,21 +69,26 @@ public final class PanduCrypto {
   private static byte[] random(int n) { byte[] b = new byte[n]; RNG.nextBytes(b); return b; }
 
   /** bits: 128 (default in the other versions, smaller QR) or 256. */
-  public static Card newCard(int bits) {
+  public static Card newCard(int bits) { return newCard(bits, false); }
+
+  /** pin = true: a QR + PIN card, with a share for the server. */
+  public static Card newCard(int bits, boolean pin) {
     if (bits != 128 && bits != 256) throw new IllegalArgumentException("bits must be 128 or 256");
-    return new Card(b32(random(10)), b32(random(bits / 8)), b64url(random(32)));
+    return new Card(b32(random(10)), b32(random(bits / 8)), b64url(random(32)), pin ? b64url(random(16)) : null);
   }
 
-  public static String makeLink(String base, String id, String key) {
+  public static String makeLink(String base, String id, String key) { return makeLink(base, id, key, false); }
+
+  public static String makeLink(String base, String id, String key, boolean pin) {
     if (!id.matches("[A-Z2-7]{16}") || !key.matches("[A-Z2-7]{26}|[A-Z2-7]{52}")) throw new IllegalArgumentException("bad id or key");
     int h = base.indexOf('#');
-    return (h >= 0 ? base.substring(0, h) : base) + "#D=" + id + key;
+    return (h >= 0 ? base.substring(0, h) : base) + (pin ? "#P=" : "#D=") + id + key;
   }
 
-  /** Returns {id, key}, or null if the link is not a Pandu-style link. */
+  /** Returns {id, key, "pin" or ""}, or null if the link is not a Pandu-style link. */
   public static String[] parseLink(String link) {
     Matcher m = LINK.matcher(link == null ? "" : link);
-    return m.find() ? new String[] { m.group(1), m.group(2) } : null;
+    return m.find() ? new String[] { m.group(2), m.group(3), m.group(1).equals("P") ? "pin" : "" } : null;
   }
 
   /** What the server keeps instead of the edit token: hex SHA-256 of the token string. */
@@ -112,6 +122,44 @@ public final class PanduCrypto {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  /* ---------- QR + PIN (FORMAT.md, section 8) ---------- */
+  static byte[] hkdf(byte[] ikm, byte[] salt, String info, int len) throws Exception {
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(salt, "HmacSHA256"));
+    byte[] prk = mac.doFinal(ikm);
+    mac.init(new SecretKeySpec(prk, "HmacSHA256"));
+    mac.update(info.getBytes(StandardCharsets.US_ASCII));
+    mac.update((byte) 1);
+    byte[] okm = mac.doFinal(), out = new byte[len]; /* len <= 32: one block is enough */
+    System.arraycopy(okm, 0, out, 0, len);
+    return out;
+  }
+
+  /** What the reader sends to the server to get the share. PIN: 4 to 12 digits. */
+  public static String pinProof(String id, String key, String pin) throws Exception {
+    if (!pin.matches("\\d{4,12}")) throw new IllegalArgumentException("the PIN must be 4 to 12 digits");
+    byte[] salt = hkdf(unb32(key), unb32(id), "pandu-pin-v1/pin", 16);
+    PBEKeySpec spec = new PBEKeySpec(pin.toCharArray(), salt, PIN_ITER, 256);
+    return b64url(SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded());
+  }
+
+  static byte[] pinDataKey(String id, String key, String share) throws Exception {
+    byte[] k1 = unb32(key), k2 = unb64url(share), ikm = new byte[k1.length + k2.length];
+    System.arraycopy(k1, 0, ikm, 0, k1.length);
+    System.arraycopy(k2, 0, ikm, k1.length, k2.length);
+    return hkdf(ikm, unb32(id), "pandu-pin-v1/data", k1.length);
+  }
+
+  /** Encrypts JSON text for a PIN card; with a PIN (not null) it also fills s and ph for the server. */
+  public static Sealed encryptPin(String json, Card card, String pin) throws Exception {
+    Sealed e = encrypt(json, b32(pinDataKey(card.id, card.key, card.share)));
+    return pin == null ? e : new Sealed(e.ct, e.iv, card.share, tokenHash(pinProof(card.id, card.key, pin)));
+  }
+
+  public static String decryptPin(String ct, String iv, String id, String key, String share) {
+    try { return decrypt(ct, iv, b32(pinDataKey(id, key, share))); } catch (Exception e) { return null; }
   }
 
   static byte[] aes(int mode, byte[] key, byte[] iv, byte[] data) throws Exception {

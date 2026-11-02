@@ -29,7 +29,7 @@ public class VectorsTest {
     Map<?, ?> l = (Map<?, ?>) v.get("link");
     ok(PanduCrypto.makeLink((String) l.get("base"), (String) l.get("id"), (String) l.get("key")).equals(l.get("link")), "link");
     String[] p = PanduCrypto.parseLink((String) l.get("link"));
-    ok(p != null && p[0].equals(l.get("id")) && p[1].equals(l.get("key")) && PanduCrypto.b32(hex((String) l.get("id_hex"))).equals(l.get("id")), "parse link");
+    ok(p != null && p[0].equals(l.get("id")) && p[1].equals(l.get("key")) && p[2].isEmpty() && PanduCrypto.b32(hex((String) l.get("id_hex"))).equals(l.get("id")), "parse link");
     Map<?, ?> t = (Map<?, ?>) v.get("token");
     ok(PanduCrypto.tokenHash((String) t.get("tok")).equals(t.get("sha256_hex")), "token hash");
     for (Object o : (List<?>) v.get("aes_gcm")) {
@@ -39,6 +39,15 @@ public class VectorsTest {
       byte[] ct = PanduCrypto.aes(javax.crypto.Cipher.ENCRYPT_MODE, PanduCrypto.unb32((String) x.get("key")), PanduCrypto.unb64url((String) x.get("iv")), hex((String) x.get("plaintext_hex")));
       ok(PanduCrypto.b64url(ct).equals(x.get("ct")), "encrypt " + name);
     }
+    Map<?, ?> pv = (Map<?, ?>) v.get("pin");
+    String pid = (String) pv.get("id"), pkey = (String) pv.get("key"), psh = (String) pv.get("share");
+    String proof = PanduCrypto.pinProof(pid, pkey, (String) pv.get("pin"));
+    ok(proof.equals(pv.get("proof")) && PanduCrypto.tokenHash(proof).equals(pv.get("ph")), "PIN proof");
+    ok(PanduCrypto.makeLink("https://example.com/r", pid, pkey, true).equals(pv.get("link")) && PanduCrypto.parseLink((String) pv.get("link"))[2].equals("pin"), "PIN link");
+    ok(pv.get("json").equals(PanduCrypto.decryptPin((String) pv.get("ct"), (String) pv.get("iv"), pid, pkey, psh)), "PIN decrypt");
+    PanduCrypto.Card pcard = PanduCrypto.newCard(128, true);
+    PanduCrypto.Sealed ps = PanduCrypto.encryptPin("{\"doc\":\"x\"}", pcard, "1234");
+    ok("{\"doc\":\"x\"}".equals(PanduCrypto.decryptPin(ps.ct, ps.iv, pcard.id, pcard.key, ps.s)) && PanduCrypto.decrypt(ps.ct, ps.iv, pcard.key) == null, "PIN round trip, QR key alone fails");
     String json = "{\"n\":\"Maria\",\"note\":\"" + "á é í ó ú ç 🐼 ".repeat(20) + "\"}";
     for (int bits : new int[] { 128, 256 }) {
       PanduCrypto.Card c = PanduCrypto.newCard(bits);

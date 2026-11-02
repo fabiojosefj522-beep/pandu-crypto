@@ -91,8 +91,27 @@ Um cartão cifrado em Python ou Java abre no navegador, e vice-versa.
 
 ### Testes e demonstração
 
-- `node test/test.mjs`: 41 testes, sem instalar nada. Python: `python examples/python/test_vectors.py`. Java: `javac -d build examples/java/*.java && java -cp build VectorsTest`.
+- `node test/test.mjs`: 65 testes, sem instalar nada. Python: `python examples/python/test_vectors.py`. Java: `javac -d build examples/java/*.java && java -cp build VectorsTest`.
 - `example/index.html`: sirva a pasta (por exemplo `python3 -m http.server`) e abra `/example/` para ver, lado a lado, o que o servidor guardaria e o que fica só no link.
+
+## Modo QR + PIN
+
+Para dados que só a pessoa certa deve abrir: um laudo para o médico, a senha da fechadura para o hóspede, o prontuário do pet para a clínica. Aqui, **uma foto do QR não basta**.
+
+- A chave dos dados é formada por duas metades: a que está no QR e outra que fica no servidor.
+- O servidor só entrega a metade dele para quem prova o PIN. Depois de 5 PINs errados, o cartão trava por 15 minutos, e o tempo dobra a cada erro seguinte, até 24 horas.
+- O servidor continua sem conseguir ler nada, e nem consegue testar PINs sozinho, porque a prova depende da chave que está só no QR.
+
+```js
+const card = newCard({ pin: true });                       // card.share vai para o servidor
+await savePin(API, card, { laudo: 'Exame normal' }, '482913');
+const link = makeLink('https://seu-site.com/', card.id, card.key, { pin: true });   // link #P=
+
+// quem recebe o QR:
+const r = await openPin(API, link, '482913');   // {data} | {error: 'wrong-pin', left} | {error: 'locked', wait}
+```
+
+**Limites, com honestidade:** quem tiver o QR **e** uma cópia do banco de dados do servidor não precisa do PIN. Quem tiver o QR pode deixar o cartão travado digitando PINs errados; o dono destrava salvando de novo. Use 6 dígitos ou mais, e nunca o PIN do banco. **Não use para emergência:** quem socorre não sabe o PIN.
 
 ## E os computadores quânticos?
 
@@ -194,7 +213,20 @@ With the reference server there are shortcuts: `save(api, card, data)`, `load(ap
 
 **Other languages:** the format is specified in [FORMAT.md](FORMAT.md), with official [test vectors](test/vectors.json). Ready-made, mutually compatible versions are checked against the same vectors on every change: [Python](examples/python/pandu_crypto.py) (`pip install cryptography`) and [Java/Kotlin for Android](examples/java/PanduCrypto.java) (no dependencies). A card encrypted in Python or Java opens in the browser, and the other way round.
 
-**Tests and demo:** `node test/test.mjs` (41 tests, nothing to install); `python examples/python/test_vectors.py`; `javac -d build examples/java/*.java && java -cp build VectorsTest`. Serve the folder and open `/example/` to see, side by side, what a server would store and what stays only in the link.
+**Tests and demo:** `node test/test.mjs` (65 tests, nothing to install); `python examples/python/test_vectors.py`; `javac -d build examples/java/*.java && java -cp build VectorsTest`. Serve the folder and open `/example/` to see, side by side, what a server would store and what stays only in the link.
+
+### QR + PIN mode
+
+For data only the right person should open: a medical report for the doctor, a door code for a guest, a pet's records for the vet. Here, **a photo of the QR is not enough**. The data key has two halves, one in the QR and one on the server, and the server hands its half only to whoever proves the PIN. After 5 wrong PINs the card locks for 15 minutes, doubling at each further wrong PIN up to 24 hours. The server still cannot read anything, and cannot even test PINs on its own, because the proof depends on the key that is only in the QR.
+
+```js
+const card = newCard({ pin: true });
+await savePin(API, card, { report: 'All normal' }, '482913');
+const link = makeLink('https://your-site.com/', card.id, card.key, { pin: true });  // a #P= link
+const r = await openPin(API, link, '482913');   // {data} | {error: 'wrong-pin', left} | {error: 'locked', wait}
+```
+
+**Honest limits:** whoever has the QR **and** a copy of the server's database does not need the PIN. Someone with the QR can keep the card locked by typing wrong PINs; the owner unlocks it by saving again. Use 6 or more digits, never your bank PIN. **Not for emergencies:** a rescuer does not know the PIN.
 
 ### What about quantum computers?
 

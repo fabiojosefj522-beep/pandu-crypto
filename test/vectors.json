@@ -85,5 +85,21 @@
       "plaintext_hex": "007b226e223a224d617269612064612053696c7661222c226274223a224f2b222c22616c223a5b2244697069726f6e61222c2250656e6963696c696e61225d2c226374223a5b5b2246c3a162696f222c2266696c686f222c222b35352033312039393939392d30303030225d5d2c226e6f7465223a2244696162c3a9746963612e2055736120696e73756c696e612e20f09f90bc227d",
       "ct": "oOCOPLqLHDTBWeFDMTGxBnidLnJeKDXX5oR47zkKZFoqCxno1SXv4z0zn5Vduc02NMs3SyvVO4EmSbDYZ5rQHSuYLD4mRlwsCBighp-qpbcpBSuMzGtZiC4ttPrG1ojbTlVOptRKUtUbNCfF6i8cW8vBCejVf3cdGrSeuafl2ROp-C7EOqx9EwRgsAMIFZRETIo7NRc99k10A6PHgIi6jRB6_C5_kA"
     }
-  ]
+  ],
+  "pin": {
+    "about": "pin_salt = HKDF-SHA256(ikm = key bytes, salt = id bytes, info = \"pandu-pin-v1/pin\", 16 bytes); proof = base64url(PBKDF2-SHA256(PIN as ASCII digits, pin_salt, 100000 iterations, 32 bytes)); ph = hex SHA-256 of the proof string; data_key = HKDF-SHA256(ikm = key bytes || share bytes, salt = id bytes, info = \"pandu-pin-v1/data\", length of the key)",
+    "id": "GAYTEMZUGU3DOOBZ",
+    "key": "KBIVEU2UKVLFOWCZLJNVYXK6L4",
+    "share": "cHFyc3R1dnd4eXp7fH1-fw",
+    "pin": "482913",
+    "link": "https://example.com/r#P=GAYTEMZUGU3DOOBZKBIVEU2UKVLFOWCZLJNVYXK6L4",
+    "pin_salt_hex": "266a741e6210f791f6dcd0bb92b4294d",
+    "proof": "ZwTyxQBVhZ1eihaSdOn1zE2GOCrF2B3ReltepDlbsk4",
+    "ph": "820f21c30dc938d30a7882cd65bfad131832203a3947f488ed185c0e383ff1b1",
+    "data_key_hex": "5d618d0c0fd406ca246da68f5ea9d9f6",
+    "iv": "wMHCw8TFxsfIycrL",
+    "plaintext_hex": "007b22646f63223a224c6175646f222c2274657874223a224578616d65206e6f726d616c2e227d",
+    "json": "{\"doc\":\"Laudo\",\"text\":\"Exame normal.\"}",
+    "ct": "_yrjWtIhtCMUtJUEw_hvlVJpOe3fq1W1wW95Pq23NqQgmS8Gbw-bl51H0_OJ3LDb1tbrlvP4QQ"
+  }
 }

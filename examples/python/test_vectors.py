@@ -32,6 +32,16 @@ for v in V["aes_gcm"]:
     ct = AESGCM(pc.unb32(v["key"])).encrypt(pc.unb64url(v["iv"]), bytes.fromhex(v["plaintext_hex"]), None)
     ok(pc.b64url(ct) == v["ct"], "encrypt " + v["name"])
 
+# QR + PIN
+pv = V["pin"]
+ok(pc.pin_proof(pv["id"], pv["key"], pv["pin"]) == pv["proof"] and pc.token_hash(pv["proof"]) == pv["ph"], "PIN proof")
+ok(pc.make_link("https://example.com/r", pv["id"], pv["key"], pin=True) == pv["link"] and pc.parse_link(pv["link"]).get("pin") is True, "PIN link")
+ok(pc._pin_data_key(pv["id"], pv["key"], pv["share"]).hex() == pv["data_key_hex"], "PIN data key")
+ok(json.dumps(pc.decrypt_pin(pv["ct"], pv["iv"], pv["id"], pv["key"], pv["share"]), ensure_ascii=False, separators=(",", ":")) == pv["json"], "PIN decrypt")
+card = pc.new_card(pin=True)
+e = pc.encrypt_pin({"doc": "x"}, card, "1234")
+ok(pc.decrypt_pin(e["ct"], e["iv"], card["id"], card["key"], e["s"]) == {"doc": "x"} and pc.decrypt(e["ct"], e["iv"], card["key"]) is None, "PIN round trip, QR key alone fails")
+
 # round trip with fresh random cards, 128 and 256 bits
 data = {"n": "Maria", "al": ["Dipirona"], "note": "á é í ó ú ç 🐼" * 20}
 for bits in (128, 256):
