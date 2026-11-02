@@ -1,7 +1,7 @@
 {
   "name": "pandu-crypto",
   "version": "1.1.0",
-  "description": "Zero-knowledge QR links for sensitive data: AES-GCM on the device, the key only in the URL fragment, the server stores only ciphertext. The method behind Pandu SOS.",
+  "description": "Zero-knowledge QR links for sensitive data: AES-GCM on the device, the key only in the URL fragment, the server stores only ciphertext. Open QR or QR + PIN, in JavaScript, Python and Java. The method behind Pandu SOS.",
   "type": "module",
   "main": "src/pandu-crypto.js",
   "exports": "./src/pandu-crypto.js",
@@ -17,16 +17,22 @@
     "test": "node test/test.mjs"
   },
   "keywords": [
-    "qr-code",
-    "encryption",
     "aes-gcm",
-    "zero-knowledge",
-    "privacy",
-    "health",
     "emergency",
-    "web-crypto",
+    "encryption",
+    "gdpr",
+    "health",
+    "hkdf",
+    "java",
+    "kotlin",
     "lgpd",
-    "gdpr"
+    "pbkdf2",
+    "pin",
+    "privacy",
+    "python",
+    "qr-code",
+    "web-crypto",
+    "zero-knowledge"
   ],
   "author": "Fábio José dos Santos (https://usepandu.com.br)",
   "license": "MIT",

@@ -2,12 +2,14 @@
 
 **Português** · [English](#english)
 
-QR codes com dados sensíveis (ficha médica, alergias, contato de emergência, plaquinha de pet) que **nem o servidor consegue ler**. É o mesmo método que o [Pandu SOS](https://usepandu.com.br) usa em produção, aberto para qualquer pessoa usar e conferir.
+QR codes com dados sensíveis (ficha médica, alergias, contato de emergência, plaquinha de pet, documentos) que **nem o servidor consegue ler**. É o mesmo método que o [Pandu SOS](https://usepandu.com.br) usa em produção, aberto para qualquer pessoa usar e conferir.
 
-- Sem dependências: um arquivo de ~120 linhas usando a Web Crypto do próprio navegador.
-- Roda no navegador, Node 18+, Deno, Bun e Cloudflare Workers.
-- Servidor de referência pronto para Cloudflare Pages + D1 (grátis para começar).
-- Licença MIT, uso comercial liberado. Empresas: veja [Para empresas](#para-empresas).
+- **Dois modos:** QR aberto (quem escaneia lê na hora, ideal para emergência) e [QR + PIN](#modo-qr--pin) (a foto do QR sozinha não abre).
+- **AES-GCM** de 128 bits por padrão ou 256 bits, resistente a computadores quânticos. A chave fica só no link do QR.
+- **Três linguagens compatíveis:** JavaScript (navegador, Node 18+, Deno, Bun, Cloudflare Workers), [Python](examples/python/pandu_crypto.py) e [Java/Kotlin](examples/java/PanduCrypto.java), com [especificação](FORMAT.md) e vetores de teste oficiais.
+- **Sem dependências:** um arquivo de JavaScript usando a Web Crypto do próprio navegador.
+- **Servidor de referência** pronto para Cloudflare Pages + D1 (grátis para começar).
+- **Licença MIT,** uso comercial liberado. Empresas: veja [Para empresas](#para-empresas).
 
 ## Como funciona
 
@@ -143,12 +145,14 @@ Feito por Fábio José dos Santos, criador do [Pandu SOS](https://usepandu.com.b
 
 [Português](#pandu-crypto) · **English**
 
-QR codes for sensitive data (medical card, allergies, emergency contacts, pet tags) that **not even the server can read**. It is the same method [Pandu SOS](https://usepandu.com.br) uses in production, open for anyone to use and audit.
+QR codes for sensitive data (medical card, allergies, emergency contacts, pet tags, documents) that **not even the server can read**. It is the same method [Pandu SOS](https://usepandu.com.br) uses in production, open for anyone to use and audit.
 
-- No dependencies: one ~120-line file on top of the browser's own Web Crypto.
-- Runs in browsers, Node 18+, Deno, Bun and Cloudflare Workers.
-- A reference server ready for Cloudflare Pages + D1 (free to start).
-- MIT License, commercial use allowed. Companies: see [For companies](#for-companies).
+- **Two modes:** open QR (whoever scans reads it at once, made for emergencies) and [QR + PIN](#qr--pin-mode) (a photo of the QR alone does not open it).
+- **AES-GCM**, 128-bit by default or 256-bit, quantum-resistant. The key lives only in the QR link.
+- **Three compatible languages:** JavaScript (browsers, Node 18+, Deno, Bun, Cloudflare Workers), [Python](examples/python/pandu_crypto.py) and [Java/Kotlin](examples/java/PanduCrypto.java), with a [specification](FORMAT.md) and official test vectors.
+- **No dependencies:** one JavaScript file on top of the browser's own Web Crypto.
+- **A reference server** ready for Cloudflare Pages + D1 (free to start).
+- **MIT License,** commercial use allowed. Companies: see [For companies](#for-companies).
 
 ### How it works
 
